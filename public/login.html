@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Login — AshaGuard GPS</title>
+  
+  <meta name="theme-color" content="#0b0f19">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: radial-gradient(circle at 50% 50%, #111827 0%, #030712 100%);
+    }
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 30px;
+      animation: fadeIn 0.5s ease-out;
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .login-header .logo-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 15px;
+    }
+    .login-header h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    .login-header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .login-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-light);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: var(--shadow-lg);
+    }
+    .error-msg {
+      color: #ef4444;
+      font-size: 13px;
+      margin-top: -5px;
+      margin-bottom: 15px;
+      display: none;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="login-container">
+    <div class="login-header">
+      <i data-lucide="shield-alert" class="logo-icon animate-pulse" style="color: var(--color-risk); filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.6));"></i>
+      <h1>AshaGuard <span class="accent-text">GPS</span></h1>
+      <p>Authorized Personnel Only</p>
+    </div>
+    
+    <div class="login-card">
+      <form id="login-form">
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label for="password">Enter System Password</label>
+          <input type="password" id="password" placeholder="Password" required style="padding: 12px; font-size: 15px;">
+        </div>
+        
+        <div id="error-msg" class="error-msg">Incorrect password. Please try again.</div>
+        
+        <button type="submit" class="primary-btn full-width" style="padding: 12px; font-size: 15px;">
+          <i data-lucide="log-in"></i> Access Dashboard
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const pwd = document.getElementById('password').value;
+      
+      // Expected password from user request or default
+      if (pwd === 'asha-admin-123' || pwd === 'asha123' || pwd === 'admin') {
+        sessionStorage.setItem('asha_auth', 'true');
+        window.location.href = 'index.html';
+      } else {
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

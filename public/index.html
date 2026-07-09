@@ -11,6 +11,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
+  <!-- Authentication Check -->
+  <script>
+    if (sessionStorage.getItem('asha_auth') !== 'true') {
+      window.location.href = 'login.html';
+    }
+  </script>
+  
   <!-- Google Fonts: Plus Jakarta Sans for a premium, clean look -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

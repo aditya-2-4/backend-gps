@@ -138,26 +138,52 @@ const server = http.createServer((req, res) => {
     
     const html = `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
       <head>
         <title>ASHA Backend Status</title>
+        <meta name="theme-color" content="#0b0f19">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://unpkg.com/lucide@latest"></script>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; background-color: #f4f7f6; color: #333; }
-          .card { background: white; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
-          h1 { color: #2c3e50; }
-          p { font-size: 16px; line-height: 1.6; }
-          .status { color: #27ae60; font-weight: bold; }
+          body { display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 50%, #111827 0%, #030712 100%); min-height: 100vh; margin: 0; }
+          .dashboard-card { width: 100%; max-width: 500px; padding: 30px; margin: 20px; }
+          .status { color: var(--color-safe); font-weight: bold; text-shadow: 0 0 8px var(--color-safe); }
+          .highlight { color: #facc15; font-weight: bold; font-family: monospace; font-size: 14px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;}
+          .header-title { display: flex; align-items: center; gap: 12px; margin-bottom: 25px; border-bottom: 1px solid var(--border-light); padding-bottom: 15px; }
+          .info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-light); border-radius: 8px; }
+          .info-label { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; font-weight: 600; text-transform: uppercase; }
         </style>
       </head>
       <body>
-        <div class="card">
-          <h1>Backend Dashboard</h1>
-          <p><strong>Database Status:</strong> <span class="status">Connected (Active)</span></p>
-          <p><strong>Domain Name:</strong> ${domain}</p>
-          <p><strong>Frontend Password:</strong> ${password}</p>
-          <hr>
-          <p style="font-size: 14px; color: #7f8c8d;">API Endpoints: /api/households, /api/sensors</p>
+        <div class="dashboard-card">
+          <div class="header-title">
+            <i data-lucide="server" style="color: var(--color-primary); width: 32px; height: 32px;"></i>
+            <h1 style="font-size: 20px;">AshaGuard <span class="accent-text">Backend</span></h1>
+          </div>
+          
+          <div class="info-row">
+            <div class="info-label"><i data-lucide="database"></i> Web App / Database</div>
+            <div class="status">Connected (Active)</div>
+          </div>
+          
+          <div class="info-row">
+            <div class="info-label"><i data-lucide="globe"></i> Domain Name</div>
+            <div style="font-size: 14px;">${domain}</div>
+          </div>
+          
+          <div class="info-row">
+            <div class="info-label"><i data-lucide="key"></i> Frontend Password</div>
+            <div class="highlight">${password}</div>
+          </div>
+          
+          <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-light); font-size: 12px; color: var(--text-muted); text-align: center;">
+            <i data-lucide="activity" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> API Services Running Perfectly
+          </div>
         </div>
+        <script>lucide.createIcons();</script>
       </body>
       </html>
     `;
