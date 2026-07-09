@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AshaGuard GPS — Supervisor Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Firebase Compat Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+
+  <style>
+    /* Additional styles for supervisor dashboard */
+    .supervisor-layout { display: flex; height: calc(100vh - 70px); }
+    .sup-sidebar { width: 350px; background: var(--bg-card); border-right: 1px solid var(--border-color); padding: 20px; overflow-y: auto; }
+    .sup-main { flex: 1; position: relative; }
+    .sup-map { width: 100%; height: 100%; }
+    .stat-card { background: var(--bg-light); border: 1px solid var(--border-color); padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+    .stat-value { font-size: 2rem; font-weight: 700; margin: 10px 0; }
+    .stat-title { color: var(--text-muted); font-size: 0.9rem; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-wrapper">
+        <i data-lucide="shield-alert" class="logo-icon"></i>
+        <h1>AshaGuard <span class="accent-text">Supervisor</span></h1>
+      </div>
+    </div>
+  </header>
+
+  <div class="supervisor-layout">
+    <aside class="sup-sidebar">
+      <h2>Ward Overview (Ward 12)</h2>
+      <p style="color:var(--text-muted); margin-bottom: 20px;">Real-time zone detection metrics</p>
+      
+      <div class="stat-card" style="border-left: 4px solid var(--color-risk)">
+        <div class="stat-title">Risk Zone (Red)</div>
+        <div class="stat-value" id="count-risk" style="color: var(--color-risk)">0</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted)">Households requiring immediate visit</div>
+      </div>
+
+      <div class="stat-card" style="border-left: 4px solid var(--color-watch)">
+        <div class="stat-title">Watch Zone (Orange)</div>
+        <div class="stat-value" id="count-watch" style="color: var(--color-watch)">0</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted)">Households to visit within 24 hours</div>
+      </div>
+
+      <div class="stat-card" style="border-left: 4px solid var(--color-safe)">
+        <div class="stat-title">Safe Zone (Green)</div>
+        <div class="stat-value" id="count-safe" style="color: var(--color-safe)">0</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted)">No immediate action required</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-title">Active Sensors</div>
+        <div class="stat-value" id="count-sensors">0</div>
+      </div>
+    </aside>
+
+    <main class="sup-main">
+      <div id="sup-map" class="sup-map"></div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="supervisor.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

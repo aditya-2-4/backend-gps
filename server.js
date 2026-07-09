@@ -133,7 +133,7 @@ const server = http.createServer((req, res) => {
   
   // Resolve target file path (sanitize queries/hashes)
   let urlPath = req.url.split('?')[0].split('#')[0];
-  let filePath = path.join(__dirname, '../frontend', urlPath === '/' ? 'index.html' : urlPath);
+  let filePath = path.join(__dirname, 'public', urlPath === '/' ? 'index.html' : urlPath);
   
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';

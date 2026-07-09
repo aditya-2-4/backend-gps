@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AshaGuard GPS — GPS Zone Detection & Risk Monitoring</title>
+  
+  <!-- PWA Manifest & Mobile Theme Color -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0f19">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Google Fonts: Plus Jakarta Sans for a premium, clean look -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS for maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* ESP32 Modal Styles */
+    .esp-modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+    .esp-modal { background: var(--bg-card); width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
+    .esp-modal-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(59, 130, 246, 0.1); }
+    .esp-modal-header h2 { margin: 0; color: var(--text-light); display: flex; align-items: center; gap: 10px; }
+    .esp-modal-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px; border-radius: 5px; }
+    .esp-modal-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .esp-modal-body { padding: 20px; color: var(--text-main); }
+    .esp-code-block { background: #1e1e1e; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; overflow-x: auto; color: #d4d4d4; margin-top: 10px; border: 1px solid #333; position: relative; }
+    .copy-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
+    .copy-btn:hover { background: rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body>
+  
+  <!-- App Shell -->
+  <div class="app-shell">
+    
+    <!-- Top Navigation Header (Desktop / Tablet view) -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-wrapper">
+          <i data-lucide="shield-alert" class="logo-icon animate-pulse"></i>
+          <h1>AshaGuard <span class="accent-text">GPS</span></h1>
+        </div>
+        <span class="divider"></span>
+        <div class="asha-status">
+          <i data-lucide="radio" class="status-icon green-dot" id="gps-status-dot"></i>
+          <span id="gps-status-text">ASHA Active Coverage</span>
+        </div>
+      </div>
+      
+      <!-- Global Summary Banner (Auto-updated counts) -->
+      <div class="global-counts-banner" id="global-counts-banner">
+        <!-- Will be populated dynamically by JavaScript -->
+      </div>
+
+      <div class="header-right">
+        <button id="esp32-setup-btn" class="primary-btn" title="ESP32 Connection Setup" style="margin-right: 15px; background-color: var(--color-risk); border-color: var(--color-risk); padding: 8px 12px; gap: 5px;">
+          <i data-lucide="plus"></i> ESP32
+        </button>
+        <button id="reset-db-btn" class="secondary-btn" title="Reset Database to Mock Data">
+          <i data-lucide="rotate-ccw"></i> Reset Demo
+        </button>
+        <div class="user-profile">
+          <div class="avatar" id="avatar-letters">AW</div>
+          <span class="username" id="username-display">ASHA Worker (Ward 12)</span>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Dashboard Body -->
+    <main class="dashboard-body">
+      
+      <!-- Left Sidebar: Priority List & ASHA Location Controller (Map tab on mobile) -->
+      <aside class="sidebar left-sidebar mobile-view-panel" id="list-panel">
+        
+        <!-- ASHA GPS Location Controller Card -->
+        <div class="dashboard-card location-controller">
+          <div class="card-header">
+            <i data-lucide="map-pin" class="card-icon blue"></i>
+            <h2>ASHA GPS Simulator</h2>
+          </div>
+          <p class="section-desc">Simulate the health worker's location in the field to calculate proximity and coverage.</p>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="asha-lat">Latitude</label>
+              <input type="number" id="asha-lat" step="0.0001" value="28.6139">
+            </div>
+            <div class="form-group">
+              <label for="asha-lng">Longitude</label>
+              <input type="number" id="asha-lng" step="0.0001" value="77.2090">
+            </div>
+          </div>
+          
+          <div class="button-group">
+            <button id="update-asha-loc-btn" class="primary-btn flex-grow">
+              <i data-lucide="refresh-cw"></i> Update
+            </button>
+            <button id="my-location-btn" class="accent-btn" title="Center on current ASHA position">
+              <i data-lucide="locate"></i> Center
+            </button>
+          </div>
+          
+          <div class="coordinates-info">
+            <i data-lucide="info" class="tiny-icon"></i>
+            <span>Drag the ASHA star marker on the map to relocate.</span>
+          </div>
+        </div>
+        
+        <!-- Priority List Container -->
+        <div class="priority-list-section flex-grow">
+          <div class="section-header">
+            <div class="title-with-count">
+              <h2 id="lang-priority-title">Priority List (प्राथमिकता सूची)</h2>
+              <span class="count-badge" id="list-total-count">0</span>
+            </div>
+            <div class="sort-indicator">
+              <i data-lucide="arrow-down-narrow-wide"></i> Sorted by Risk & Proximity
+            </div>
+          </div>
+          
+          <!-- Bilingual Count Banner -->
+          <div class="bilingual-summary-strip" id="bilingual-summary-strip">
+            <!-- Populated dynamically by JS -->
+          </div>
+          
+          <!-- Scrollable Priority Cards -->
+          <div class="priority-cards-scrollable" id="priority-cards-list">
+            <div class="loading-state">
+              <i data-lucide="loader" class="spinner"></i> Loading households...
+            </div>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Center Panel: Map & Filter Chips (Map tab on mobile) -->
+      <section class="main-content mobile-view-panel" id="map-panel">
+        <!-- Filter Chips Overlay -->
+        <div class="filter-chips-container">
+          <button class="chip active" data-filter="all">
+            <i data-lucide="layers"></i> All
+          </button>
+          <button class="chip risk" data-filter="risk">
+            <span class="chip-color red"></span> Risk (जोखिम)
+          </button>
+          <button class="chip watch" data-filter="watch">
+            <span class="chip-color orange"></span> Watch (निगरानी)
+          </button>
+          <button class="chip safe" data-filter="safe">
+            <span class="chip-color green"></span> Safe (सुरक्षित)
+          </button>
+        </div>
+        
+        <!-- Leaflet Map Container -->
+        <div id="map"></div>
+        
+        <!-- Bottom Sheet Toggle Floating Button -->
+        <button id="toggle-sheet-btn" class="bottom-sheet-trigger">
+          <i data-lucide="footprints"></i> Walkable (<span id="btn-radius-label">500m</span>)
+          <span class="indicator-badge" id="reach-count">0</span>
+        </button>
+      </section>
+      
+      <!-- Right Sidebar: Detail View & Parameter Simulator (Details tab on mobile) -->
+      <aside class="sidebar right-sidebar mobile-view-panel" id="detail-panel">
+        <!-- Placeholder when no household selected -->
+        <div class="placeholder-state" id="detail-placeholder">
+          <i data-lucide="heart-handshake" class="huge-icon animate-pulse"></i>
+          <h3>Select a Household</h3>
+          <p>Click a marker on the map or a card in the priority list to view details, timeline history, and run simulations.</p>
+        </div>
+        
+        <!-- Detail Panel Content (Hidden initially) -->
+        <div class="detail-view-content hidden" id="detail-view-content">
+          
+          <!-- Top Full Width Zone Banner -->
+          <div class="zone-banner risk" id="detail-zone-banner">
+            <!-- Populated by JS -->
+          </div>
+          
+          <div class="detail-body-scrollable">
+            <!-- Household Basic Info -->
+            <div class="detail-section basic-info">
+              <div class="name-age-header">
+                <h2 id="detail-name">Ramesh Kumar</h2>
+                <span class="age-badge" id="detail-age">72 Yrs</span>
+              </div>
+              <div class="address-row">
+                <i data-lucide="home"></i>
+                <span id="detail-address">H.No 120, Ward 12, Shakurpur, New Delhi</span>
+              </div>
+            </div>
+            
+            <!-- IoT Device Calibration & Status -->
+            <div class="detail-section iot-status-section">
+              <div class="section-title-with-actions">
+                <h3>IoT Temperature Sensor</h3>
+                <span class="telemetry-badge unassigned" id="iot-status-badge">
+                  <i data-lucide="wifi-off"></i> Unassigned
+                </span>
+              </div>
+              
+              <div class="iot-telemetry-grid">
+                <div class="telemetry-card">
+                  <span class="tel-label">Device Serial</span>
+                  <strong class="tel-val" id="tel-device-id">None</strong>
+                </div>
+                <div class="telemetry-card">
+                  <span class="tel-label">Battery Level</span>
+                  <strong class="tel-val" id="tel-battery-level">--</strong>
+                </div>
+                <div class="telemetry-card">
+                  <span class="tel-label">Last Signal</span>
+                  <strong class="tel-val" id="tel-last-ping">--</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- GPS Card (Interactive Coordinates) -->
+            <div class="detail-section gps-section">
+              <h3>GPS Location Details</h3>
+              <a href="#" id="google-maps-link" target="_blank" class="gps-card-link" title="Click to open in Google Maps">
+                <div class="gps-coordinates-card">
+                  <div class="gps-icon-wrapper">
+                    <i data-lucide="navigation"></i>
+                  </div>
+                  <div class="gps-text">
+                    <div class="gps-label">Home GPS Coordinates (Tap to Navigate)</div>
+                    <div class="coords" id="detail-coords">28.6139, 77.2090</div>
+                  </div>
+                  <i data-lucide="external-link" class="gps-arrow"></i>
+                </div>
+              </a>
+              
+              <!-- Static Inline Map Thumbnail -->
+              <div class="static-map-wrapper">
+                <div id="static-thumbnail-map"></div>
+                <div class="static-map-overlay">
+                  <span class="static-map-tag">Home Location Map</span>
+                </div>
+              </div>
+              
+              <div class="distance-status-strip">
+                <div class="distance-metric">
+                  <span class="label">Distance from ASHA</span>
+                  <span class="value" id="detail-distance">120m</span>
+                </div>
+                <div class="coverage-tag" id="detail-coverage-tag">
+                  Within Reach
+                </div>
+              </div>
+            </div>
+
+            <!-- IoT Device Setup Form (Installer Workflow) -->
+            <div class="detail-section iot-setup-section">
+              <h3>Device Setup & Calibration</h3>
+              <p class="section-desc">Associate a physical sensor and calibrate its coordinates during installation.</p>
+              
+              <div class="sim-controls">
+                <div class="form-group">
+                  <label for="setup-device-id">Device Serial Number (ID)</label>
+                  <input type="text" id="setup-device-id" placeholder="e.g. HI-IOT-102">
+                </div>
+                
+                <div class="button-group">
+                  <button id="autofill-gps-btn" class="secondary-btn flex-grow" title="Copies ASHA worker's active GPS as the household location">
+                    <i data-lucide="locate-fixed"></i> Auto-fill GPS (ASHA Location)
+                  </button>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="setup-lat">Calibrated Lat</label>
+                    <input type="number" id="setup-lat" step="0.00001">
+                  </div>
+                  <div class="form-group">
+                    <label for="setup-lng">Calibrated Lng</label>
+                    <input type="number" id="setup-lng" step="0.00001">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="setup-battery">Battery level (%)</label>
+                    <input type="number" id="setup-battery" min="0" max="100" value="95">
+                  </div>
+                  <div class="form-group">
+                    <label for="setup-status">Device Status</label>
+                    <select id="setup-status" class="select-dropdown">
+                      <option value="online">Online / Active</option>
+                      <option value="offline">Offline / Warning</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button id="save-device-setup-btn" class="primary-btn full-width">
+                  <i data-lucide="save"></i> Save Device & Location Settings
+                </button>
+              </div>
+            </div>
+
+            <!-- Health & Heat Index Simulator (Interactive parameter inputs) -->
+            <div class="detail-section simulator-section">
+              <div class="section-title-with-actions">
+                <h3>Vitals Simulator</h3>
+                <span class="simulator-tag"><i data-lucide="cpu"></i> Sandbox</span>
+              </div>
+              <p class="section-desc">Manually override metrics to simulate transitions, heat alerts, and trigger SMS notifications.</p>
+              
+              <div class="sim-controls">
+                <div class="sim-control-group">
+                  <div class="slider-header">
+                    <label for="sim-heat-index">Indoor Heat Index (°C)</label>
+                    <span class="slider-val" id="sim-heat-index-val">42°C</span>
+                  </div>
+                  <input type="range" id="sim-heat-index" min="20" max="60" value="42" class="range-slider">
+                </div>
+                
+                <div class="sim-control-group">
+                  <div class="slider-header">
+                    <label for="sim-risk-score">Calculated Risk Score</label>
+                    <span class="slider-val" id="sim-risk-score-val">75</span>
+                  </div>
+                  <input type="range" id="sim-risk-score" min="0" max="100" value="75" class="range-slider">
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="sim-age">Person's Age</label>
+                    <input type="number" id="sim-age" min="1" max="120" value="72">
+                  </div>
+                  <div class="form-group">
+                    <label for="sim-mobile">SMS Alert Mobile</label>
+                    <input type="text" id="sim-mobile" value="+91 98765 43210">
+                  </div>
+                </div>
+                
+                <button id="save-simulation-btn" class="success-btn full-width">
+                  <i data-lucide="check-circle-2"></i> Save & Recalculate Vitals
+                </button>
+              </div>
+            </div>
+            
+            <!-- Zone History Timeline (Last 7 Days) -->
+            <div class="detail-section history-section">
+              <h3>Zone History (last 7 days)</h3>
+              <div class="timeline" id="detail-timeline">
+                <!-- Timeline events will be dynamically generated -->
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </aside>
+
+      <!-- Settings Panel Screen (Settings tab on mobile, overlays or inserts on desktop) -->
+      <aside class="sidebar settings-sidebar mobile-view-panel hidden" id="settings-panel">
+        <div class="settings-header">
+          <i data-lucide="settings" class="card-icon blue"></i>
+          <h2>Application Settings (सेटिंग्स)</h2>
+        </div>
+        <p class="section-desc">Manage system preferences, localization languages, coverage scopes, and native features.</p>
+        
+        <div class="settings-body">
+          
+          <!-- Language Selection -->
+          <div class="settings-card">
+            <h3>Language / भाषा</h3>
+            <div class="radio-group">
+              <label class="radio-label">
+                <input type="radio" name="lang-select" value="en">
+                <span>English</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="lang-select" value="hi">
+                <span>Hindi (हिंदी)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="lang-select" value="bi" checked>
+                <span>Bilingual (द्विभाषी)</span>
+              </label>
+            </div>
+          </div>
+          
+          <!-- Coverage Parameters -->
+          <div class="settings-card">
+            <h3>ASHA Coverage Settings</h3>
+            
+            <div class="settings-control-group">
+              <div class="slider-header">
+                <label for="set-coverage-radius">Walkable Radius (meters)</label>
+                <span class="slider-val" id="set-coverage-radius-val">500m</span>
+              </div>
+              <input type="range" id="set-coverage-radius" min="100" max="2000" step="50" value="500" class="range-slider">
+            </div>
+
+            <div class="settings-control-group" style="margin-top:14px;">
+              <div class="slider-header">
+                <label for="set-battery-alert">Low Battery Alert Threshold (%)</label>
+                <span class="slider-val" id="set-battery-alert-val">20%</span>
+              </div>
+              <input type="range" id="set-battery-alert" min="5" max="50" step="5" value="20" class="range-slider">
+            </div>
+          </div>
+          
+          <!-- GPS Tracker Toggle (ASHA Phone Geolocation) -->
+          <div class="settings-card">
+            <h3>Real GPS Location Tracking</h3>
+            <p class="settings-desc">Activate your phone's real internal GPS sensor to track your movement and sort households automatically as you walk.</p>
+            
+            <div class="switch-row">
+              <span class="switch-label">Track Live Smartphone GPS</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="real-gps-toggle">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="gps-coordinates-debug hidden" id="real-gps-debug">
+              <div class="debug-title">Live Sensor Feed:</div>
+              <div class="debug-coords" id="real-gps-val">Waiting for signal...</div>
+            </div>
+          </div>
+
+          <!-- ASHA Profile -->
+          <div class="settings-card">
+            <h3>ASHA Personnel Profile</h3>
+            <div class="form-group" style="margin-bottom:10px;">
+              <label for="set-worker-name">ASHA Worker Name</label>
+              <input type="text" id="set-worker-name" value="Anjali Sharma">
+            </div>
+            <div class="form-group">
+              <label for="set-ward-num">Assigned Ward Number</label>
+              <input type="text" id="set-ward-num" value="Ward 12 (Shakurpur)">
+            </div>
+          </div>
+
+          <button id="save-settings-btn" class="primary-btn full-width">
+            <i data-lucide="check"></i> Apply Settings Changes
+          </button>
+        </div>
+      </aside>
+
+    </main>
+
+    <!-- Sliding Bottom Sheet: Households inside coverage range -->
+    <div class="bottom-sheet" id="bottom-sheet">
+      <div class="bottom-sheet-header" id="bottom-sheet-header">
+        <div class="handle"></div>
+        <div class="header-title-row">
+          <div class="header-info">
+            <i data-lucide="footprints" class="blue"></i>
+            <h2 id="sheet-title-text">Coverage Area (Walkable Distance &lt; 500m)</h2>
+          </div>
+          <button id="close-sheet-btn" class="close-btn" title="Minimize sheet">
+            <i data-lucide="chevron-down"></i>
+          </button>
+        </div>
+        <p class="sub-header-desc">Households within walkable radius of the ASHA worker's active GPS coordinate.</p>
+      </div>
+      
+      <div class="bottom-sheet-content">
+        <div class="reach-table-wrapper">
+          <table class="reach-table">
+            <thead>
+              <tr>
+                <th>Patient Name</th>
+                <th>Age</th>
+                <th>Zone Status</th>
+                <th>Risk Score</th>
+                <th>Heat Index</th>
+                <th>Distance</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="bottom-sheet-list">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="map-panel">
+        <i data-lucide="map"></i>
+        <span>Map</span>
+      </button>
+      <button class="nav-item" data-tab="list-panel">
+        <i data-lucide="clipboard-list"></i>
+        <span>Priorities</span>
+      </button>
+      <button class="nav-item" data-tab="detail-panel">
+        <i data-lucide="user"></i>
+        <span>Details</span>
+      </button>
+      <button class="nav-item" data-tab="settings-panel">
+        <i data-lucide="sliders"></i>
+        <span>Settings</span>
+      </button>
+    </nav>
+    
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="notification-container" id="notification-container">
+    <!-- Dynamic notifications -->
+  </div>
+
+  <!-- Leaflet Javascript library -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+          
+  <!-- Firebase Compat Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+
+  <!-- Core Javascript Application Logic -->
+  <script src="app.js"></script>
+
+  <!-- PWA service worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('PWA Service Worker registered!', reg))
+          .catch(err => console.log('Service Worker registration failed: ', err));
+      });
+    }
+  </script>
+  <!-- ESP32 Setup Modal -->
+  <div class="esp-modal-overlay" id="esp-modal">
+    <div class="esp-modal">
+      <div class="esp-modal-header">
+        <h2><i data-lucide="cpu"></i> ESP32 Connection Setup</h2>
+        <button class="esp-modal-close" id="close-esp-modal"><i data-lucide="x"></i></button>
+      </div>
+      <div class="esp-modal-body">
+        <h3 style="margin-top:0;">How to connect your ESP32</h3>
+        <ol style="line-height: 1.6; margin-left: 20px; margin-bottom: 20px;">
+          <li>Connect a DHT22 sensor to pin 4, and a GPS module to pins 16 (RX) & 17 (TX).</li>
+          <li>Make sure your ESP32 and this server are on the same WiFi network.</li>
+          <li>Replace <code>YOUR_WIFI_SSID</code>, <code>YOUR_WIFI_PASSWORD</code>, and <code>YOUR_SERVER_IP</code> in the code below.</li>
+          <li>Upload the code via Arduino IDE and the sensor data will appear in the web app automatically!</li>
+        </ol>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h4 style="margin: 0; color: #60a5fa;">ESP32 Firmware Code (Arduino C++)</h4>
+        </div>
+        <div class="esp-code-block">
+          <button class="copy-btn" id="copy-esp-code"><i data-lucide="copy" style="width: 14px; height: 14px;"></i> Copy Code</button>
+<pre><code id="esp-code-content" style="white-space: pre-wrap; word-wrap: break-word;">#include &lt;WiFi.h&gt;
+#include &lt;HTTPClient.h&gt;
+#include &lt;DHT.h&gt;
+#include &lt;TinyGPSPlus.h&gt;
+#include &lt;HardwareSerial.h&gt;
+
+const char* ssid = "YOUR_WIFI_SSID";
+const char* password = "YOUR_WIFI_PASSWORD";
+// Replace YOUR_SERVER_IP with your computer's local IP (e.g. 192.168.1.15)
+const char* serverURL = "http://YOUR_SERVER_IP:3000/api/sensor";
+
+#define DHTPIN 4
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
+HardwareSerial GPSSerial(1);
+TinyGPSPlus gps;
+
+void setup() {
+  Serial.begin(115200);
+  dht.begin();
+  GPSSerial.begin(9600, SERIAL_8N1, 16, 17);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); }
+}
+
+void loop() {
+  while (GPSSerial.available() > 0) gps.encode(GPSSerial.read());
+
+  if (WiFi.status() == WL_CONNECTED) {
+    float temp = dht.readTemperature();
+    float hum = dht.readHumidity();
+    float heatIndex = dht.computeHeatIndex(temp, hum, false);
+    float lat = gps.location.isValid() ? gps.location.lat() : 28.6148;
+    float lng = gps.location.isValid() ? gps.location.lng() : 77.2082;
+
+    String json = "{\"id\":\"HI-IOT-101\",\"temp\":" + String(temp) + ",\"humidity\":" + String(hum) + ",\"heat_index\":" + String(heatIndex) + ",\"lat\":" + String(lat, 6) + ",\"lng\":" + String(lng, 6) + ",\"battery\":85}";
+
+    HTTPClient http;
+    http.begin(serverURL);
+    http.addHeader("Content-Type", "application/json");
+    http.POST(json);
+    http.end();
+  }
+  delay(300000); // 5 minutes
+}</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('esp-modal');
+      const openBtn = document.getElementById('esp32-setup-btn');
+      const closeBtn = document.getElementById('close-esp-modal');
+      const copyBtn = document.getElementById('copy-esp-code');
+      
+      openBtn.addEventListener('click', () => modal.style.display = 'flex');
+      closeBtn.addEventListener('click', () => modal.style.display = 'none');
+      
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+      });
+
+      copyBtn.addEventListener('click', () => {
+        const code = document.getElementById('esp-code-content').innerText;
+        navigator.clipboard.writeText(code).then(() => {
+          const originalHTML = copyBtn.innerHTML;
+          copyBtn.innerHTML = '<i data-lucide="check" style="width: 14px; height: 14px;"></i> Copied!';
+          lucide.createIcons();
+          setTimeout(() => { copyBtn.innerHTML = originalHTML; lucide.createIcons(); }, 2000);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
