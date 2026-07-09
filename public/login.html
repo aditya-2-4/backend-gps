@@ -76,12 +76,16 @@
     
     <div class="login-card">
       <form id="login-form">
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label for="username">Username</label>
+          <input type="text" id="username" placeholder="Enter Username" required style="padding: 12px; font-size: 15px;">
+        </div>
         <div class="form-group" style="margin-bottom: 20px;">
-          <label for="password">Enter System Password</label>
-          <input type="password" id="password" placeholder="Password" required style="padding: 12px; font-size: 15px;">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter Password" required style="padding: 12px; font-size: 15px;">
         </div>
         
-        <div id="error-msg" class="error-msg">Incorrect password. Please try again.</div>
+        <div id="error-msg" class="error-msg">Incorrect username or password. Please try again.</div>
         
         <button type="submit" class="primary-btn full-width" style="padding: 12px; font-size: 15px;">
           <i data-lucide="log-in"></i> Access Dashboard
@@ -95,10 +99,11 @@
     
     document.getElementById('login-form').addEventListener('submit', (e) => {
       e.preventDefault();
+      const user = document.getElementById('username').value.trim();
       const pwd = document.getElementById('password').value;
       
-      // Expected password from user request or default
-      if (pwd === 'asha-admin-123' || pwd === 'asha123' || pwd === 'admin') {
+      // Expected credentials
+      if (user.toLowerCase() === 'admin' && (pwd === 'asha-admin-123' || pwd === 'asha123' || pwd === 'admin')) {
         sessionStorage.setItem('asha_auth', 'true');
         window.location.href = 'index.html';
       } else {

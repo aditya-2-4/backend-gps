@@ -175,6 +175,11 @@ const server = http.createServer((req, res) => {
           </div>
           
           <div class="info-row">
+            <div class="info-label"><i data-lucide="user"></i> Frontend Username</div>
+            <div class="highlight">admin</div>
+          </div>
+          
+          <div class="info-row">
             <div class="info-label"><i data-lucide="key"></i> Frontend Password</div>
             <div class="highlight">${password}</div>
           </div>
