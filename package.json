@@ -1,0 +1,13 @@
+{
+  "name": "gps-zone-detection",
+  "version": "1.0.0",
+  "description": "ASHA GPS Zone Detection and Risk Monitoring System (Zero-Dependency)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {},
+  "author": "Antigravity",
+  "license": "ISC"
+}
