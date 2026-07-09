@@ -131,6 +131,41 @@ const server = http.createServer((req, res) => {
     return;
   }
   
+  // Root Path: Simple Backend Dashboard instead of Frontend GUI
+  if (req.method === 'GET' && req.url === '/') {
+    const domain = req.headers.host || 'unknown-domain';
+    const password = process.env.FRONTEND_PASSWORD || 'asha-admin-123';
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>ASHA Backend Status</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; background-color: #f4f7f6; color: #333; }
+          .card { background: white; padding: 20px 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+          h1 { color: #2c3e50; }
+          p { font-size: 16px; line-height: 1.6; }
+          .status { color: #27ae60; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>Backend Dashboard</h1>
+          <p><strong>Database Status:</strong> <span class="status">Connected (Active)</span></p>
+          <p><strong>Domain Name:</strong> ${domain}</p>
+          <p><strong>Frontend Password:</strong> ${password}</p>
+          <hr>
+          <p style="font-size: 14px; color: #7f8c8d;">API Endpoints: /api/households, /api/sensors</p>
+        </div>
+      </body>
+      </html>
+    `;
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(html);
+    return;
+  }
+  
   // Resolve target file path (sanitize queries/hashes)
   let urlPath = req.url.split('?')[0].split('#')[0];
   let filePath = path.join(__dirname, 'public', urlPath === '/' ? 'index.html' : urlPath);
